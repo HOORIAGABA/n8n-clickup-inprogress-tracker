@@ -1,0 +1,533 @@
+{
+  "name": "Slack \"I'm working today\" Logger",
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": [
+          "message"
+        ],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1792,
+        -128
+      ],
+      "id": "6d7425a8-4ef5-4ea5-8fa3-13f7ba6048f3",
+      "name": "Slack Trigger",
+      "webhookId": "39fb9287-a96a-4305-b024-0d278c2aff2d",
+      "credentials": {
+        "slackApi": {
+          "id": "R2MaXqBUAx9RinUf",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 500810252,
+          "mode": "list",
+          "cachedResultName": "Members",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=500810252"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Slack Member ID",
+              "lookupValue": "={{ $json.user }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1568,
+        -128
+      ],
+      "id": "722b2d0a-f1eb-41c2-811d-98168fe7c90f",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        -128
+      ],
+      "id": "7020a2c6-c422-46c3-bc0f-74cd73adc95e",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.currentDate }}",
+        "format": "custom",
+        "customFormat": "dd/MM/yyyy",
+        "options": {
+          "includeInputFields": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        -128
+      ],
+      "id": "0d3e3799-6730-4d3e-8a10-8cc2b4610466",
+      "name": "Date & Time1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1541158572,
+          "mode": "list",
+          "cachedResultName": "DailyLogsData",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=1541158572"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "        unique_key": "={{ $json.unique_key }}",
+            " Productive Days": "={{ $json.productive_day }}",
+            "Member Name": "={{ $json['MemberName'] }}",
+            "Member ID": "={{ $json['MemberID'] }}",
+            "Date": "={{ $json.formattedDate }}",
+            "ReportMonth": "={{ $json.formattedMonth }}",
+            "TeamName": "={{ $json.TeamName }}"
+          },
+          "matchingColumns": [
+            "        unique_key"
+          ],
+          "schema": [
+            {
+              "id": "        unique_key",
+              "displayName": "        unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Member ID",
+              "displayName": "Member ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Member Name",
+              "displayName": "Member Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Productive Days",
+              "displayName": " Productive Days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Projects_Working_On",
+              "displayName": "No_of_Projects_Working_On",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tasks Assigned Today",
+              "displayName": "Tasks Assigned Today",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Assigned_Tasks",
+              "displayName": "No_of_Assigned_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Pending Tasks",
+              "displayName": "Pending Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Pending_Tasks",
+              "displayName": "No_of_Pending_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "In-Progress Tasks",
+              "displayName": "In-Progress Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_In-Progress_Tasks",
+              "displayName": "No_of_In-Progress_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Active Tasks",
+              "displayName": "Active Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Active_Tasks",
+              "displayName": "No_of_Active_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Repeted Tasks",
+              "displayName": "Repeted Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Repeted_Tasks",
+              "displayName": "No_of_Repeted_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Completed Tasks",
+              "displayName": "Completed Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Completed_Tasks",
+              "displayName": "No_of_Completed_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "In-Testing Tasks",
+              "displayName": "In-Testing Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_InTesting_Tasks",
+              "displayName": "No_of_InTesting_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TeamName",
+              "displayName": "TeamName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ReportMonth",
+              "displayName": "ReportMonth",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -224,
+        -128
+      ],
+      "id": "decee654-f1a7-49ec-a743-761897d55a9d",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "317c7bac-9b4d-4eba-8406-bb1f529723e5",
+              "name": "productive_day",
+              "value": "=yes",
+              "type": "string"
+            },
+            {
+              "id": "09902b81-d304-4b7a-9fe4-94da96ef73f8",
+              "name": "TeamName",
+              "value": "={{ $('Get row(s) in sheet').item.json.TeamName }}",
+              "type": "string"
+            },
+            {
+              "id": "87a945b7-0882-46e8-b1e0-4917df173d03",
+              "name": "formattedDate",
+              "value": "={{ $('Date & Time1').item.json.formattedDate }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -448,
+        -128
+      ],
+      "id": "d5ebb27a-f22f-4d34-86cf-b6ea848fc132",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $('Date & Time').item.json.currentDate }}",
+        "format": "custom",
+        "customFormat": "MMMM",
+        "outputFieldName": "formattedMonth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        -128
+      ],
+      "id": "96c62e46-6024-4203-b525-dcba6fd7d2ae",
+      "name": "Date & Time2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ────────────────────────────────────────────────\n//   n8n Code node – Create unique_key = BackupName_FormattedDate\n// ────────────────────────────────────────────────\n\n// 1. Get the incoming item (webhook usually sends 1 item)\nconst item = $input.first();\n\nif (!item) {\n  return [{ json: { error: \"No input data received\" } }];\n}\n\n// 2. Extract the two fields we need\nlet backupName = $('Get row(s) in sheet').first().json['Member ID']|| \"\";\nlet formattedDate = $('Date & Time1').first().json.formattedDate || \"\";\n\n// 3. Clean & normalize (remove extra spaces, handle missing values)\nbackupName = String(backupName).trim();\nformattedDate = String(formattedDate).trim();\n\n// Fallbacks if values are missing\nif (!backupName) {\n  backupName = \"UnknownBackup\";\n}\nif (!formattedDate) {\n  // fallback to YYYY-MM-DD if formattedDate is missing\n  const today = new Date();\n  formattedDate = today.toISOString().split('T')[0];\n}\n\n// 4. Create the unique key\nconst unique_key = `${backupName}_${formattedDate}`;\n\n// 5. Return the original data + new field\nreturn [{\n  json: {\n    ...item.json,              // keep all original fields (Backup Name, Db, Media, etc.)\n    unique_key: unique_key,    // the new field you wanted\n    MemberName:$('Get row(s) in sheet').first().json['Member Name'],\n    MemberID:$('Get row(s) in sheet').first().json['Member ID'],\n    TeamName: $('Get row(s) in sheet').first().json.TeamName,\n    // Optional debug fields – remove later if not needed\n    // debug_backupName: backupName,\n    // debug_formattedDate: formattedDate\n    formattedMonth: $input.first().json.formattedMonth,\n    productivity_msg: $('Slack Trigger').first().json.text\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        -128
+      ],
+      "id": "ba833bbc-59f0-4c64-a382-6d9c8a8f32ca",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Date & Time1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time1": {
+      "main": [
+        [
+          {
+            "node": "Date & Time2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timezone": "Asia/Karachi",
+    "saveDataErrorExecution": "none",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false
+  },
+  "versionId": "62586d8f-5c2c-475a-b053-e05e5bcb3be4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bfefda8b8561e999840c4adfac23e386ed9e4cb2425c2372729c1876c847c669"
+  },
+  "id": "XlzUqO6TXRo2fhOj",
+  "tags": []
+}
