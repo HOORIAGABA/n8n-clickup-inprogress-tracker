@@ -1,0 +1,1183 @@
+{
+  "name": "clickup-inprogress-tracker-AI",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "get",
+        "id": "={{ $json.task_id }}",
+        "includeSubtasks": true
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        32
+      ],
+      "id": "fb9622d4-14d6-40c4-a12e-06272bd5c376",
+      "name": "Get a task",
+      "credentials": {
+        "clickUpApi": {
+          "id": "FGZ36444ame9ffAE",
+          "name": "ClickUp account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "team": "90181787093",
+        "events": [
+          "taskStatusUpdated"
+        ],
+        "filters": {
+          "listId": "901812001221",
+          "spaceId": "90187174200"
+        }
+      },
+      "type": "n8n-nodes-base.clickUpTrigger",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        32
+      ],
+      "id": "2f462f8f-e70b-4b01-897e-a549dd226070",
+      "name": "ClickUp Trigger",
+      "webhookId": "4db43853-bfae-4d81-97ae-ba365036abd5",
+      "credentials": {
+        "clickUpApi": {
+          "id": "FGZ36444ame9ffAE",
+          "name": "ClickUp account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        32
+      ],
+      "id": "7c1174c8-8f12-49e0-bfe2-7488e61ed604",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $json.currentDate }}",
+        "format": "custom",
+        "customFormat": "dd/MM/yyyy",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        32
+      ],
+      "id": "f317c7ed-dd9b-455c-ab92-5b6458005b8e",
+      "name": "Date & Time3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1cca6822-e859-4bcd-a030-5e055d7310d9",
+              "name": " Member Name",
+              "value": "={{ $json.assignees[0].username }}",
+              "type": "string"
+            },
+            {
+              "id": "ff32a537-8657-49ee-826b-9c3f8639fff7",
+              "name": " Member ID",
+              "value": "={{ $json.assignees[0].id }} ",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        32
+      ],
+      "id": "02698449-78cc-4d4a-9d8a-b219410f2b97",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "db7e23ca-872f-494f-b9b0-33ebadf7b08d",
+              "leftValue": "={{ $json.status.status }}",
+              "rightValue": "in progress",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "3f48c7df-8e6c-4e43-a460-7a76dfae11ce",
+              "leftValue": "={{ $json.status.status }}",
+              "rightValue": "r&d",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2048,
+        32
+      ],
+      "id": "89c5e6f5-dc85-42d8-8725-bd3419773f25",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Usually triggered once per assignment → we expect one item\nconst triggerItem = $input.first();\nif (!triggerItem) {\n  return [{ json: { error: \"No input item received\" } }];\n}\n\n// Helper: safe date formatting (PKT = Asia/Karachi)\nfunction formatPktDate(timestampMs) {\n  if (!timestampMs || isNaN(Number(timestampMs))) return \"N/A\";\n  const date = new Date(Number(timestampMs));\n  return date.toLocaleString('en-US', {\n    timeZone: 'Asia/Karachi',\n    year: 'numeric',\n    month: 'short',\n    day: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n}\n\n// ── Get task data ── preferably from \"Get a task\" node ────────────────────────\nconst taskItem = $('Get a task').first();\n\nlet name, startFmt, endFmt, createdFmt, tags = [];\n\n// Preferred path: data from \"Get a task\" node\nif (taskItem?.json?.name) {\n  name       = (taskItem.json.name || \"Unnamed Task\").trim();\n  startFmt   = formatPktDate(taskItem.json.start_date);\n  endFmt     = formatPktDate(taskItem.json.due_date);\n  createdFmt = formatPktDate(taskItem.json.date_created);\n  tags       = taskItem.json.tags || [];   // array of { name: \"...\", color?: \"...\", ... }\n} \n// Fallback: try trigger / webhook data\nelse {\n  name       = (triggerItem.json.name || triggerItem.json.task?.name || \"Unnamed Task\").trim();\n  startFmt   = formatPktDate(triggerItem.json.start_date || triggerItem.json.task?.start_date);\n  endFmt     = formatPktDate(triggerItem.json.due_date   || triggerItem.json.task?.due_date);\n  createdFmt = formatPktDate(triggerItem.json.date_created || triggerItem.json.task?.date_created);\n  tags       = triggerItem.json.tags || triggerItem.json.task?.tags || [];\n}\n\n// ── Format tags ───────────────────────────────────────────────────────────────\nlet tagsLine = \"\";\nif (tags.length > 0) {\n  // Option A: comma-separated, clean\n  const tagNames = tags.map(t => t.name.trim()).filter(Boolean);\n  tagsLine = `  Project: ${tagNames.join(\", \")}`\n\n  // Option B: one tag per line (uncomment if preferred)\n  // tagsLine = tags.map(t => `  #${t.name.trim()}`).join(\"\\n\");\n}\n\n// ── Build single formatted task block ────────────────────────────────────────\nconst taskLine = [\n  `• ${name}`,\n                      // ← tags added here (5th line-ish depending on spacing)\n  `  Created: ${createdFmt}`,\n  `  Start:   ${startFmt}`,\n  `  End:     ${endFmt}`,\n  tagsLine,\n]\n.filter(line => line.trim() !== \"\")     // remove empty lines (e.g. if no tags)\n.join(\"\\n\");\n\nconst formattedTasks = taskLine;\n\n// ── Get member info ──────────────────────────────────────────────────────────\nconst memberName = $('Edit Fields4').first()?.json?.[' Member Name']\n                || $('Edit Fields4').first()?.json?.MemberName\n                || triggerItem.json.assignee?.username\n                || triggerItem.json.history_items?.[0]?.after?.username\n                || \"—\";\n\nconst memberId = $('Edit Fields4').first()?.json?.[' Member ID']\n              || $('Edit Fields4').first()?.json?.MemberId\n              || triggerItem.json.assignee?.id\n              || triggerItem.json.history_items?.[0]?.after?.id\n              || \"—\";\n\n// Date context\nconst todayDate = $input.first().json.formattedDate\n               || triggerItem.json.formattedDate\n               || new Date().toISOString().split('T')[0];\n\nconst uniqueKey = `${memberId}_${todayDate}`.trim();\n\nconst taskCount = 1;  // since we're processing one task at a time here\n\n// ── Final output ─────────────────────────────────────────────────────────────\nreturn [{\n  json: {\n    MemberName: memberName,\n    MemberId: memberId,\n    TodayDate: todayDate,\n    unique_key: uniqueKey,\n    InProgressTasks: formattedTasks,       // now includes tags before End date\n    InProgressTaskCount: taskCount,\n    // For debugging / later use\n    // TaskName: name,\n    // TagsRaw: tags,\n    // TagsFormatted: tagsLine,\n    // CreatedFmt: createdFmt,\n    // StartFmt: startFmt,\n    // EndFmt: endFmt,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        32
+      ],
+      "id": "4b15e349-c1d1-443d-abfc-b7b71c50b88c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "858640ac-7ecf-4f32-b670-d3eb224329a0",
+              "name": "InProgressTasks",
+              "value": "={{ $json.InProgressTasks }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3168,
+        32
+      ],
+      "id": "2383757f-46b2-45e9-9581-3eccdd1d23e4",
+      "name": "Edit Fields9"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1541158572,
+          "mode": "list",
+          "cachedResultName": "DailyLogsData",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=1541158572"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "        unique_key",
+              "lookupValue": "={{ $json.unique_key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3392,
+        32
+      ],
+      "id": "cc8594e5-6865-4cd0-aa59-d604d4e14e62",
+      "name": "Get row(s) in sheet1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2bdc5bd7-1567-4a7f-8e20-f3345e8d2bdc",
+              "name": "oldTasks",
+              "value": "={{ $json['In-Progress Tasks'] || \" \"}}",
+              "type": "string"
+            },
+            {
+              "id": "ea646ebb-99ee-4dd8-9457-60986e0e9d1e",
+              "name": "newTasks",
+              "value": "={{ $('Edit Fields9').item.json.InProgressTasks }}",
+              "type": "string"
+            },
+            {
+              "id": "89afe539-1d20-4441-9476-6e87163e98bd",
+              "name": "old_No_of_InProgress_Tasks",
+              "value": "={{ $json['No_of_In-Progress_Tasks'] || 0}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3616,
+        32
+      ],
+      "id": "93e4dfd0-a568-432b-93fc-18dd8e4b0095",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================================================\n//   Check if the new completed task is already in oldTasks\n// ================================================\n\nconst oldText   = ($input.first().json.oldTasks  || \"\").trim();\nconst newTask   = ($input.first().json.newTasks  || \"\").trim();\n\nif (!newTask) {\n  return [{\n    json: {\n      ...$json,\n      alreadyExists: false,\n      reason: \"No new task provided\",\n      shouldAppend: true\n    }\n  }];\n}\n\nif (!oldText) {\n  return [{\n    json: {\n      ...$json,\n      alreadyExists: false,\n      reason: \"No previous tasks → first entry\",\n      shouldAppend: true\n    }\n  }];\n}\n\n// Normalize both strings a bit (remove extra spaces, normalize line endings)\nconst normalize = str => str\n  .replace(/\\s+/g, ' ')\n  .trim()\n  .toLowerCase();\n\n// We will check two ways:\n// 1. Exact full-string match of the new task block\n// 2. Contains the task name / bullet part (more forgiving)\n\nconst normalizedOld  = normalize(oldText);\nconst normalizedNew  = normalize(newTask);\n\n// ── Method 1: exact match of the whole new task block ────────────────\nconst alreadyExact = normalizedOld.includes(normalizedNew);\n\n// ── Method 2: extract likely task title (first line after •) ─────────\nlet newTitle = \"\";\nif (newTask.startsWith(\"•\")) {\n  newTitle = newTask.split(\"\\n\")[0].trim().toLowerCase();\n} else {\n  // fallback: take first non-empty line\n  newTitle = newTask.split(\"\\n\").find(l => l.trim())[0]?.trim().toLowerCase() || \"\";\n}\n\nlet hasSimilarTitle = false;\nif (newTitle) {\n  hasSimilarTitle = oldText\n    .split(\"\\n\")\n    .some(line => {\n      const trimmed = line.trim().toLowerCase();\n      return trimmed.startsWith(\"•\") && trimmed.includes(newTitle);\n    });\n}\n\n// Final decision\nconst alreadyExists = alreadyExact || hasSimilarTitle;\n\nreturn [{\n  json: {\n    ...$json,\n    // alreadyExists: alreadyExists,\n    shouldAppend: !alreadyExists,\n    // reason: alreadyExists\n    //   ? \"Task already exists in Completed Tasks\"\n    //   : \"New task – safe to append\",\n    // newTaskTitle: newTitle || \"(no title detected)\",\n    // debug_normalizedNew: normalizedNew.substring(0, 100) + \"...\",\n    // debug_normalizedOldLength: normalizedOld.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3840,
+        32
+      ],
+      "id": "d031eb30-4d0b-48ac-967f-8ff6a6ba4d09",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ece99218-98c9-4bb2-ae7f-0e75663ad658",
+              "name": "combinedTasks",
+              "value": "={{ $json.newTasks ? $json.newTasks + \"\\n \" + $json.oldTasks : + $json.oldTasks }}\n ",
+              "type": "string"
+            },
+            {
+              "id": "25fb2e6e-2205-4480-abd1-050f4c2d2646",
+              "name": "new_no_of_InProgress_task",
+              "value": "={{ $json.old_No_of_InProgress_Tasks }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4288,
+        -64
+      ],
+      "id": "a3c5ed33-0d16-45ff-bb58-cf011e7bd165",
+      "name": "Edit Fields10"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1541158572,
+          "mode": "list",
+          "cachedResultName": "DailyLogsData",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=1541158572"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "        unique_key": "={{ $('Code in JavaScript').item.json.unique_key }}",
+            "Date": "={{ $('Code in JavaScript').item.json.TodayDate }} ",
+            "Member ID": "={{ $('Code in JavaScript').item.json.MemberId }} ",
+            "Member Name": "={{ $('Code in JavaScript').item.json.MemberName }} ",
+            "In-Progress Tasks": "={{ $('Edit Fields10').item.json.combinedTasks }}",
+            "No_of_In-Progress_Tasks": "={{ $('Edit Fields10').item.json.new_no_of_InProgress_task + 1}}",
+            "ReportMonth": "={{ $json.formattedMonth }}"
+          },
+          "matchingColumns": [
+            "        unique_key"
+          ],
+          "schema": [
+            {
+              "id": "        unique_key",
+              "displayName": "        unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Member ID",
+              "displayName": "Member ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Member Name",
+              "displayName": "Member Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Productive Days",
+              "displayName": " Productive Days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Projects_Working_On",
+              "displayName": "No_of_Projects_Working_On",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tasks Assigned Today",
+              "displayName": "Tasks Assigned Today",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "No_of_Assigned_Tasks",
+              "displayName": "No_of_Assigned_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Pending Tasks",
+              "displayName": "Pending Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "No_of_Pending_Tasks",
+              "displayName": "No_of_Pending_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "In-Progress Tasks",
+              "displayName": "In-Progress Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_In-Progress_Tasks",
+              "displayName": "No_of_In-Progress_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Active Tasks",
+              "displayName": "Active Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Active_Tasks",
+              "displayName": "No_of_Active_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Repeted Tasks",
+              "displayName": "Repeted Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "No_of_Repeted_Tasks",
+              "displayName": "No_of_Repeted_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Completed Tasks",
+              "displayName": "Completed Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Completed_Tasks",
+              "displayName": "No_of_Completed_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "In-Testing Tasks",
+              "displayName": "In-Testing Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_InTesting_Tasks",
+              "displayName": "No_of_InTesting_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TeamName",
+              "displayName": "TeamName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ReportMonth",
+              "displayName": "ReportMonth",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4736,
+        -64
+      ],
+      "id": "d51fa0f9-9ccb-451a-9d75-9eec713b1f78",
+      "name": "Append or update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $now }}",
+        "format": "custom",
+        "customFormat": "MMMM",
+        "outputFieldName": "formattedMonth",
+        "options": {
+          "includeInputFields": false
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        4512,
+        -64
+      ],
+      "id": "c9b973ae-eb8c-4eab-ad34-ddd8c8078d20",
+      "name": "Date & Time1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f84546ec-4a60-496e-af44-0381cac48f37",
+              "leftValue": "={{ $json.shouldAppend }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4064,
+        32
+      ],
+      "id": "f8a848ba-6d5e-43d5-8a0e-1aea85b04b05",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================================\n//  FALSE BRANCH: Task already exists → check if Start / End / Project changed\n// =============================================================================\n\nconst oldText = ($input.first().json.oldTasks  || \"\").trim();\nconst newTask = ($input.first().json.newTasks  || \"\").trim();\n\n// If somehow empty → no action\nif (!newTask.trim() || !oldText.trim()) {\n  return [{\n    json: {\n      ...$json,\n      needsUpdate: false,\n      updatedPendingTasks: oldText,\n      changeReason: \"empty input\",\n      changedFields: []\n    }\n  }];\n}\n\n// ── Helper functions ────────────────────────────────────────────────────────\nfunction normalizeLine(line) {\n  return line.trim().replace(/\\s+/g, ' ').toLowerCase();\n}\n\nfunction getTaskKey(block) {\n  // Use first line starting with • as identifier (task title)\n  const lines = block.split('\\n').map(l => l.trim());\n  const bulletLine = lines.find(l => l.startsWith('•')) || lines[0] || '';\n  return normalizeLine(bulletLine.replace(/^•\\s*/, ''));\n}\n\n// Find matching task block in old text\nlet oldBlock = '';\nlet oldBlockIndex = -1;\n\nconst oldBlocks = oldText.split('\\n\\n')\n  .map(b => b.trim())\n  .filter(Boolean);\n\nconst newKey = getTaskKey(newTask);\n\nfor (let i = 0; i < oldBlocks.length; i++) {\n  const key = getTaskKey(oldBlocks[i]);\n  if (key === newKey) {\n    oldBlock = oldBlocks[i];\n    oldBlockIndex = i;\n    break;\n  }\n}\n\nif (!oldBlock) {\n  // Should not happen (since we came from false branch), but safety\n  return [{\n    json: {\n      ...$json,\n      needsUpdate: false,\n      updatedPendingTasks: oldText,\n      changeReason: \"matching block not found\",\n      changedFields: []\n    }\n  }];\n}\n\n// ── Compare important fields ────────────────────────────────────────────────\nconst importantPrefixes = [\n  'start:',\n  'end:',\n  'project:'\n];\n\nconst changedFields = [];\n\n// Split into lines\nconst oldLines = oldBlock.split('\\n').map(l => l.trim());\nconst newLines = newTask.split('\\n').map(l => l.trim());\n\n// We compare line by line – looking for lines that start with important prefixes\nfor (const prefix of importantPrefixes) {\n  const oldValue = oldLines.find(l => l.toLowerCase().startsWith(prefix)) || '';\n  const newValue = newLines.find(l => l.toLowerCase().startsWith(prefix)) || '';\n\n  const oldNorm = normalizeLine(oldValue);\n  const newNorm = normalizeLine(newValue);\n\n  if (oldNorm !== newNorm && newNorm !== '') {\n    changedFields.push({\n      field: prefix.replace(':', ''),\n      old: oldValue || '(missing)',\n      new: newValue,\n      changed: true\n    });\n  }\n}\n\nconst needsUpdate = changedFields.length > 0;\n\n// ── If changed → rebuild the text with updated block ────────────────────────\nlet updatedText = oldText;\n\nif (needsUpdate) {\n  const updatedBlocks = [...oldBlocks];\n  updatedBlocks[oldBlockIndex] = newTask.trim();\n  updatedText = updatedBlocks.join('\\n\\n');\n}\n\nreturn [{\n  json: {\n    ...$json,\n    needsUpdate,\n    updatedPendingTasks: updatedText,\n    changeReason: needsUpdate ? \"Start/End/Project changed\" : \"no relevant change\",\n    changedFields,\n    taskKey: newKey\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4288,
+        128
+      ],
+      "id": "ab98dde9-3973-458d-8f4c-2297405ada16",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2a5450fc-087c-4b68-95f8-c7405dca1ce7",
+              "leftValue": "={{ $json.needsUpdate }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4512,
+        128
+      ],
+      "id": "2ded01b8-cd8c-418f-ae91-f57b5c583447",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cc998913-884d-45fa-9aa0-bca4dfe75599",
+              "name": "updatedPendingTasks",
+              "value": "={{ $json.updatedPendingTasks }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4736,
+        128
+      ],
+      "id": "a63cc575-8efd-480d-acc9-82d2d4d4f33d",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8",
+          "mode": "list",
+          "cachedResultName": "Web Team n8n Reports",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1541158572,
+          "mode": "list",
+          "cachedResultName": "DailyLogsData",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gSjiaV900li7-5NIU1SpiYfI3ZJK15H1oB3JuOXhcs8/edit#gid=1541158572"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "        unique_key": "={{ $('Code in JavaScript').item.json.unique_key }}",
+            "Date": "={{ $('Code in JavaScript').item.json.TodayDate }} ",
+            "Member ID": "={{ $('Code in JavaScript').item.json.MemberId }} ",
+            "Member Name": "={{ $('Code in JavaScript').item.json.MemberName }} ",
+            "In-Progress Tasks": "={{ $('If2').item.json.updatedPendingTasks }}",
+            "ReportMonth": "={{ $json.formattedMonth }}"
+          },
+          "matchingColumns": [
+            "        unique_key"
+          ],
+          "schema": [
+            {
+              "id": "        unique_key",
+              "displayName": "        unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Member ID",
+              "displayName": "Member ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Member Name",
+              "displayName": "Member Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Productive Days",
+              "displayName": " Productive Days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Projects_Working_On",
+              "displayName": "No_of_Projects_Working_On",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tasks Assigned Today",
+              "displayName": "Tasks Assigned Today",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "No_of_Assigned_Tasks",
+              "displayName": "No_of_Assigned_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Pending Tasks",
+              "displayName": "Pending Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "No_of_Pending_Tasks",
+              "displayName": "No_of_Pending_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "In-Progress Tasks",
+              "displayName": "In-Progress Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_In-Progress_Tasks",
+              "displayName": "No_of_In-Progress_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Active Tasks",
+              "displayName": "Active Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Active_Tasks",
+              "displayName": "No_of_Active_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Repeted Tasks",
+              "displayName": "Repeted Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "No_of_Repeted_Tasks",
+              "displayName": "No_of_Repeted_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Completed Tasks",
+              "displayName": "Completed Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_Completed_Tasks",
+              "displayName": "No_of_Completed_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "In-Testing Tasks",
+              "displayName": "In-Testing Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "No_of_InTesting_Tasks",
+              "displayName": "No_of_InTesting_Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TeamName",
+              "displayName": "TeamName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ReportMonth",
+              "displayName": "ReportMonth",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4960,
+        128
+      ],
+      "id": "4bb6ef2b-4864-419b-9dcf-3aa6e01fd434",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fnSCdUg3fhYq3oJ4",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get a task": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Date & Time3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields9": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields10": {
+      "main": [
+        [
+          {
+            "node": "Date & Time1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7dfcb9fe-8f26-4bae-a1c8-af1d74fa1ab2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bfefda8b8561e999840c4adfac23e386ed9e4cb2425c2372729c1876c847c669"
+  },
+  "id": "0BWlrSAdTu3APwYY",
+  "tags": []
+}
